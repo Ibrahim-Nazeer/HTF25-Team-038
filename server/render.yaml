@@ -1,0 +1,16 @@
+# Render Blueprint Configuration
+services:
+  - type: web
+    name: codesync-api
+    env: node
+    buildCommand: npm install && npx prisma generate
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: DAILY_API_KEY
+        sync: false
