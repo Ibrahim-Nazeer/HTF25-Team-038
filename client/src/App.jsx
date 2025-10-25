@@ -5,6 +5,7 @@ import { SocketProvider } from './context/SocketContext';
 import Login from './Pages/Login.jsx';
 import Dashboard from './pages/Dashboard';
 import InterviewRoom from './pages/InterviewRoom';
+import HeroPage from './Pages/heropage.jsx';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -44,7 +45,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/" element={<HeroPage />} />
           </Routes>
         </SocketProvider>
       </AuthProvider>
