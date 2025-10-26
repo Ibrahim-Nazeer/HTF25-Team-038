@@ -4,6 +4,25 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 require('dotenv').config();
 
+// Add global error handlers
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+console.log('🔧 Environment:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  CLIENT_URL: process.env.CLIENT_URL,
+  HAS_DATABASE_URL: !!process.env.DATABASE_URL,
+  HAS_DAILY_API_KEY: !!process.env.DAILY_API_KEY
+});
+
 const app = express();
 const server = http.createServer(app);
 
@@ -41,6 +60,31 @@ app.use(express.json());
 const sessionsRouter = require('./routes/sessions');
 const problemsRouter = require('./routes/problems');
 const authRouter = require('./routes/auth');
+
+// Test database connection
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function testDatabaseConnection() {
+  try {
+    console.log('🔍 Testing database connection...');
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    console.error('   Full error:', error);
+    process.exit(1);
+  }
+}
+
+// Test connection before starting server
+testDatabaseConnection().then(() => {
+  console.log('✅ Database test passed, starting server...');
+}).catch((error) => {
+  console.error('❌ Database test failed:', error);
+  process.exit(1);
+});
 
 // API Routes
 app.use('/api/sessions', sessionsRouter);
@@ -161,7 +205,21 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', (err) => {
+  if (err) {
+    console.error('❌ Failed to start server:', err);
+    process.exit(1);
+  }
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.IO ready for connections`);
+  console.log(`🌍 Listening on 0.0.0.0:${PORT}`);
+});
+
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+  } else {
+    console.error('❌ Server error:', error);
+  }
+  process.exit(1);
 });
