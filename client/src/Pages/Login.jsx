@@ -1,6 +1,7 @@
 import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import ConnectionStatus from '../components/ConnectionStatus';
 import { Github, Code2, Users, Video, MessageSquare } from 'lucide-react';
 
 const Login = () => {
@@ -43,6 +44,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-6">
+      <ConnectionStatus />
       <div className="max-w-6xl w-full grid md:grid-cols-2 gap-12 items-center">
         {/* Left Side - Branding */}
         <div className="text-white space-y-6">

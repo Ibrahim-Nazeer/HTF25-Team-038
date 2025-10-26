@@ -12,6 +12,10 @@ export const SocketProvider = ({ children }) => {
     const backendURL =
       import.meta.env.VITE_API_URL || 'https://htf25-team-038-production.up.railway.app';
 
+    if (!import.meta.env.VITE_API_URL) {
+      console.warn('⚠️ VITE_API_URL not set, using fallback:', backendURL);
+    }
+
     console.log('🔌 Connecting to backend:', backendURL);
 
     const socketInstance = io(backendURL, {
@@ -20,7 +24,9 @@ export const SocketProvider = ({ children }) => {
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
       secure: true,
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      timeout: 20000,
+      forceNew: true
     });
 
     socketInstance.on('connect', () => {
@@ -35,6 +41,16 @@ export const SocketProvider = ({ children }) => {
 
     socketInstance.on('connect_error', (error) => {
       console.error('⚠️ Socket connection error:', error.message);
+      console.error('   Backend URL:', backendURL);
+      console.error('   Error type:', error.type);
+    });
+
+    socketInstance.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
+    });
+
+    socketInstance.on('reconnect_failed', () => {
+      console.error('❌ Socket reconnection failed after all attempts');
     });
 
     setSocket(socketInstance);
@@ -50,8 +66,14 @@ export const SocketProvider = ({ children }) => {
       {children}
       {/* Connection Status Indicator */}
       {!isConnected && socket && (
-        <div className="fixed bottom-4 left-4 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-          Reconnecting to server...
+        <div className="fixed bottom-4 left-4 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
+          ⚠️ Reconnecting to server... Check console for details
+        </div>
+      )}
+      {/* No Socket Warning */}
+      {!socket && (
+        <div className="fixed bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50">
+          ❌ Cannot connect to backend server
         </div>
       )}
     </SocketContext.Provider>

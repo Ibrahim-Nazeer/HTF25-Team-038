@@ -30,10 +30,26 @@ export const AuthProvider = ({ children }) => {
         };
 
         try {
+          const backendURL = import.meta.env.VITE_API_URL;
+          
+          if (!backendURL) {
+            console.error('❌ VITE_API_URL is not configured!');
+            alert('Backend URL not configured. Please check environment variables.');
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+
+          console.log('🔍 Checking user in backend:', backendURL);
+          
           // Check if user exists in our DB
-          const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/user/${profile.id}`);
+          const resp = await fetch(`${backendURL}/api/auth/user/${profile.id}`, {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
           if (resp.ok) {
             const dbUser = await resp.json();
+            console.log('✅ User found in database:', dbUser.email);
             setUser({
               id: dbUser.id,
               email: dbUser.email,
@@ -45,14 +61,17 @@ export const AuthProvider = ({ children }) => {
             setPendingUserData(null);
           } else if (resp.status === 404) {
             // New user - ask for role before creating in DB
+            console.log('👤 New user detected, requesting role selection');
             setPendingUserData(profile);
             setNeedsRole(true);
           } else {
             console.error('Failed to fetch user from backend:', resp.status);
+            alert(`Backend error: ${resp.status}. Please try again.`);
             setUser(null);
           }
         } catch (error) {
-          console.error('Auth sync error:', error);
+          console.error('❌ Auth sync error:', error);
+          alert(`Cannot connect to backend server. Please check if the server is running.\n\nError: ${error.message}`);
           setUser(null);
         }
       } else {
@@ -93,6 +112,12 @@ export const AuthProvider = ({ children }) => {
     if (!pendingUserData) throw new Error('No pending user data');
 
     try {
+      const backendURL = import.meta.env.VITE_API_URL;
+      
+      if (!backendURL) {
+        throw new Error('Backend URL not configured');
+      }
+
       const body = {
         id: pendingUserData.id,
         email: pendingUserData.email,
@@ -100,17 +125,22 @@ export const AuthProvider = ({ children }) => {
         role
       };
 
-      const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sync`, {
+      console.log('📝 Creating user with role:', role);
+
+      const resp = await fetch(`${backendURL}/api/auth/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
 
       if (!resp.ok) {
-        throw new Error('Failed to create user');
+        const errorText = await resp.text();
+        throw new Error(`Failed to create user: ${resp.status} ${errorText}`);
       }
 
       const created = await resp.json();
+      console.log('✅ User created successfully:', created.email);
+      
       setUser({
         id: created.id,
         email: created.email,
@@ -121,7 +151,8 @@ export const AuthProvider = ({ children }) => {
       setNeedsRole(false);
       setPendingUserData(null);
     } catch (error) {
-      console.error('setUserRole error:', error);
+      console.error('❌ setUserRole error:', error);
+      alert(`Failed to create user account: ${error.message}`);
       throw error;
     }
   };
