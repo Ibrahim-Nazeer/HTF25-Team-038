@@ -74,17 +74,13 @@ async function testDatabaseConnection() {
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);
     console.error('   Full error:', error);
-    process.exit(1);
+    console.error('⚠️  Server will start anyway, but database operations will fail');
+    // Don't exit - let server start for debugging
   }
 }
 
-// Test connection before starting server
-testDatabaseConnection().then(() => {
-  console.log('✅ Database test passed, starting server...');
-}).catch((error) => {
-  console.error('❌ Database test failed:', error);
-  process.exit(1);
-});
+// Test connection in background (non-blocking)
+testDatabaseConnection();
 
 // API Routes
 app.use('/api/sessions', sessionsRouter);
