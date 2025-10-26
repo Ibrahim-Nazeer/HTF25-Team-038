@@ -8,14 +8,18 @@ export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // Initialize Socket.IO connection
-    const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
+    // Use environment variable or fallback to Railway URL
+    const backendURL =
+      import.meta.env.VITE_API_URL || 'https://htf25-team-038-production.up.railway.app';
+
+    console.log('🔌 Connecting to backend:', backendURL);
+
+    const socketInstance = io(backendURL, {
       transports: ['websocket', 'polling'],
-      reconnectionDelay: 1000,
       reconnection: true,
+      reconnectionDelay: 1000,
       reconnectionAttempts: 10,
-      agent: false,
-      upgrade: false,
+      secure: true,
       rejectUnauthorized: false
     });
 
@@ -30,7 +34,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+      console.error('⚠️ Socket connection error:', error.message);
     });
 
     setSocket(socketInstance);
