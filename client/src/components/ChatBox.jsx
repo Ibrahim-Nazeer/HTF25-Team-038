@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { SocketContext } from '../context/SocketContext';
 import { AuthContext } from '../context/AuthContext';
-import { Send, X } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 const ChatBox = ({ sessionId, onClose }) => {
   const socket = useContext(SocketContext);
@@ -67,14 +67,6 @@ const ChatBox = ({ sessionId, onClose }) => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
         <h3 className="text-lg font-semibold text-white">Chat</h3>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-700 rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
-        )}
       </div>
 
       {/* Messages Area */}

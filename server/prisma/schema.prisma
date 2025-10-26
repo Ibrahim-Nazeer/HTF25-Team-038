@@ -12,6 +12,12 @@ enum UserRole {
   CANDIDATE
 }
 
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 model User {
   id                  String             @id @default(cuid())
   email               String             @unique
@@ -33,15 +39,17 @@ model Problem {
 }
 
 model InterviewSession {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   title         String
   interviewerId String
   candidateId   String?
   problemId     String?
   timerDuration Int?
   dailyRoomUrl  String?
-  createdAt     DateTime @default(now())
-  interviewer   User     @relation("InterviewerSessions", fields: [interviewerId], references: [id])
-  candidate     User?    @relation("CandidateSessions", fields: [candidateId], references: [id])
-  problem       Problem? @relation(fields: [problemId], references: [id])
+  status        SessionStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  endedAt       DateTime?
+  interviewer   User          @relation("InterviewerSessions", fields: [interviewerId], references: [id])
+  candidate     User?         @relation("CandidateSessions", fields: [candidateId], references: [id])
+  problem       Problem?      @relation(fields: [problemId], references: [id])
 }

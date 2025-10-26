@@ -7,15 +7,22 @@ const prisma = new PrismaClient();
 // Get all sessions for a user
 router.get('/', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, status } = req.query;
+
+    const whereClause = {
+      OR: [
+        { interviewerId: userId },
+        { candidateId: userId }
+      ]
+    };
+
+    // Filter by status if provided
+    if (status) {
+      whereClause.status = status;
+    }
 
     const sessions = await prisma.interviewSession.findMany({
-      where: {
-        OR: [
-          { interviewerId: userId },
-          { candidateId: userId }
-        ]
-      },
+      where: whereClause,
       include: {
         interviewer: true,
         candidate: true,
@@ -123,6 +130,49 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting session:', error);
     res.status(500).json({ error: 'Failed to delete session' });
+  }
+});
+
+// End a session
+router.post('/:id/end', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    // Verify the session exists and user is the interviewer
+    const session = await prisma.interviewSession.findUnique({
+      where: { id }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    if (session.interviewerId !== userId) {
+      return res.status(403).json({ error: 'Only the interviewer can end the session' });
+    }
+
+    // Update session with ended status and timestamp
+    const updatedSession = await prisma.interviewSession.update({
+      where: { id },
+      data: {
+        status: 'COMPLETED',
+        endedAt: new Date()
+      },
+      include: {
+        interviewer: true,
+        candidate: true,
+        problem: true
+      }
+    });
+
+    res.json({ 
+      message: 'Session ended successfully',
+      session: updatedSession 
+    });
+  } catch (error) {
+    console.error('Error ending session:', error);
+    res.status(500).json({ error: 'Failed to end session' });
   }
 });
 

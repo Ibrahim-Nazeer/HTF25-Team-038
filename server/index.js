@@ -96,6 +96,12 @@ io.on('connection', (socket) => {
     io.to(sessionId).emit('timer-reset');
   });
 
+  // End session
+  socket.on('end-session', ({ sessionId }) => {
+    io.to(sessionId).emit('session-ended');
+    console.log(`Session ${sessionId} ended`);
+  });
+
   // Leave session
   socket.on('leave-session', ({ sessionId, userId }) => {
     socket.leave(sessionId);

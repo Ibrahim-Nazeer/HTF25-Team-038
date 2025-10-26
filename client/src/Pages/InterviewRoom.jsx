@@ -10,9 +10,6 @@ import ChatBox from '../components/ChatBox';
 import { 
   Code, 
   Palette, 
-  Video, 
-  MessageSquare, 
-  Clock,
   Users 
 } from 'lucide-react';
 
@@ -24,8 +21,9 @@ const InterviewRoom = () => {
   const [activeTab, setActiveTab] = useState('code');
   const [sessionData, setSessionData] = useState(null);
   const [participants, setParticipants] = useState([]);
-  const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isEnding, setIsEnding] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
 
   useEffect(() => {
     // Fetch session data
@@ -33,6 +31,14 @@ const InterviewRoom = () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sessions/${sessionId}`);
         const data = await response.json();
+        
+        // Check if session is already completed
+        if (data.status === 'COMPLETED' || data.status === 'CANCELLED') {
+          setSessionEnded(true);
+          setLoading(false);
+          return;
+        }
+        
         setSessionData(data);
         setLoading(false);
       } catch (error) {
@@ -66,14 +72,80 @@ const InterviewRoom = () => {
         socket.emit('leave-session', { sessionId, userId: user?.id });
         socket.off('user-joined');
         socket.off('user-left');
+        socket.off('session-ended');
       }
     };
   }, [sessionId, socket, user]);
+
+  // Listen for session end event
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('session-ended', () => {
+      setSessionEnded(true);
+    });
+
+    return () => {
+      socket.off('session-ended');
+    };
+  }, [socket]);
+
+  const handleEndSession = async () => {
+    if (!window.confirm('Are you sure you want to end this interview session? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsEnding(true);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to end session');
+      }
+
+      // Notify all participants via socket
+      if (socket) {
+        socket.emit('end-session', { sessionId });
+      }
+
+      setSessionEnded(true);
+      
+      // Redirect to dashboard after a short delay
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to end session:', error);
+      alert('Failed to end session. Please try again.');
+      setIsEnding(false);
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-xl">Loading interview session...</div>
+      </div>
+    );
+  }
+
+  if (sessionEnded) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-2xl font-bold mb-4">Session Ended</div>
+          <p className="text-gray-400 mb-4">This interview session has been concluded and saved to history.</p>
+          <p className="text-gray-500 text-sm">Redirecting to dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -103,14 +175,35 @@ const InterviewRoom = () => {
 
             {/* Timer */}
             <Timer sessionId={sessionId} isInterviewer={user?.role === 'INTERVIEWER'} />
+
+            {/* End Session Button - Only for Interviewer */}
+            {user?.role === 'INTERVIEWER' && (
+              <button
+                onClick={handleEndSession}
+                disabled={isEnding}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                {isEnding ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Ending...
+                  </>
+                ) : (
+                  'End Session'
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Panel - Main Workspace */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col" style={{ marginRight: '400px' }}>
           {/* Tabs */}
           <div className="bg-gray-800 border-b border-gray-700 px-6 flex gap-1">
             <TabButton
@@ -125,12 +218,6 @@ const InterviewRoom = () => {
               active={activeTab === 'whiteboard'}
               onClick={() => setActiveTab('whiteboard')}
             />
-            <TabButton
-              icon={Video}
-              label="Video Call"
-              active={activeTab === 'video'}
-              onClick={() => setActiveTab('video')}
-            />
           </div>
 
           {/* Tab Content */}
@@ -144,30 +231,25 @@ const InterviewRoom = () => {
             {activeTab === 'whiteboard' && (
               <CollaborativeWhiteboard sessionId={sessionId} />
             )}
-            {activeTab === 'video' && (
-              <VideoChat 
-                sessionId={sessionId} 
-                dailyRoomUrl={sessionData?.dailyRoomUrl}
-              />
-            )}
           </div>
         </div>
 
-        {/* Right Panel - Chat */}
-        {showChat && (
-          <div className="w-80 border-l border-gray-700 bg-gray-800">
-            <ChatBox sessionId={sessionId} />
+        {/* Right Side Panel - Video & Chat (Fixed/Constant) */}
+        <div className="absolute top-0 right-0 bottom-0 w-[400px] flex flex-col border-l border-gray-700 bg-gray-800">
+          {/* Video Chat - Top Half */}
+          <div className="h-1/2 border-b border-gray-700">
+            <VideoChat 
+              sessionId={sessionId} 
+              dailyRoomUrl={sessionData?.dailyRoomUrl}
+            />
           </div>
-        )}
-      </div>
 
-      {/* Floating Chat Toggle */}
-      <button
-        onClick={() => setShowChat(!showChat)}
-        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-colors"
-      >
-        <MessageSquare className="w-6 h-6" />
-      </button>
+          {/* Text Chat - Bottom Half */}
+          <div className="h-1/2">
+            <ChatBox sessionId={sessionId} onClose={null} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
