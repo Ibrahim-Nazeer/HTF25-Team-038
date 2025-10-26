@@ -84,4 +84,40 @@ router.patch('/user/:id/role', async (req, res) => {
   }
 });
 
+// Update user profile
+router.patch('/user/:id/profile', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      name, 
+      organization, 
+      jobRole, 
+      phoneNumber, 
+      bio, 
+      linkedinUrl, 
+      githubUrl, 
+      location 
+    } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        name,
+        organization,
+        jobRole,
+        phoneNumber,
+        bio,
+        linkedinUrl,
+        githubUrl,
+        location
+      }
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: 'Failed to update user profile' });
+  }
+});
+
 module.exports = router;

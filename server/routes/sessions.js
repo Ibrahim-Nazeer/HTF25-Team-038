@@ -117,6 +117,29 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
+// Update session problem
+router.patch('/:id/problem', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { problemId } = req.body;
+
+    const session = await prisma.interviewSession.update({
+      where: { id },
+      data: { problemId },
+      include: {
+        interviewer: true,
+        candidate: true,
+        problem: true
+      }
+    });
+
+    res.json(session);
+  } catch (error) {
+    console.error('Error updating session problem:', error);
+    res.status(500).json({ error: 'Failed to update session problem' });
+  }
+});
+
 // Delete a session
 router.delete('/:id', async (req, res) => {
   try {

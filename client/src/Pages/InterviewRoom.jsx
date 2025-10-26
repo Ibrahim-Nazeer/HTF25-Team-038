@@ -10,7 +10,10 @@ import ChatBox from '../components/ChatBox';
 import { 
   Code, 
   Palette, 
-  Users 
+  Users,
+  BookOpen,
+  X,
+  Search
 } from 'lucide-react';
 
 const InterviewRoom = () => {
@@ -24,6 +27,12 @@ const InterviewRoom = () => {
   const [loading, setLoading] = useState(true);
   const [isEnding, setIsEnding] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [showProblemLibrary, setShowProblemLibrary] = useState(false);
+  const [problems, setProblems] = useState([]);
+  const [currentProblem, setCurrentProblem] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('ALL');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
 
   useEffect(() => {
     // Fetch session data
@@ -40,6 +49,7 @@ const InterviewRoom = () => {
         }
         
         setSessionData(data);
+        setCurrentProblem(data.problem);
         setLoading(false);
       } catch (error) {
         console.error('Failed to fetch session:', error);
@@ -48,6 +58,19 @@ const InterviewRoom = () => {
     };
 
     fetchSession();
+
+    // Fetch all problems for the library
+    const fetchProblems = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/problems`);
+        const data = await response.json();
+        setProblems(data);
+      } catch (error) {
+        console.error('Failed to fetch problems:', error);
+      }
+    };
+
+    fetchProblems();
 
     // Join Socket.IO room
     if (socket && user) {
@@ -85,8 +108,14 @@ const InterviewRoom = () => {
       setSessionEnded(true);
     });
 
+    // Listen for problem changes
+    socket.on('problem-changed', ({ problem }) => {
+      setCurrentProblem(problem);
+    });
+
     return () => {
       socket.off('session-ended');
+      socket.off('problem-changed');
     };
   }, [socket]);
 
@@ -129,6 +158,49 @@ const InterviewRoom = () => {
       setIsEnding(false);
     }
   };
+
+  const handleSelectProblem = async (problem) => {
+    try {
+      // Update session with new problem
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sessions/${sessionId}/problem`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          problemId: problem.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update problem');
+      }
+
+      setCurrentProblem(problem);
+      setShowProblemLibrary(false);
+
+      // Notify all participants via socket
+      if (socket) {
+        socket.emit('change-problem', { sessionId, problem });
+      }
+    } catch (error) {
+      console.error('Failed to set problem:', error);
+      alert('Failed to set problem. Please try again.');
+    }
+  };
+
+  // Filter problems based on search and filters
+  const filteredProblems = problems.filter(problem => {
+    const matchesSearch = problem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          problem.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDifficulty = selectedDifficulty === 'ALL' || problem.difficulty === selectedDifficulty;
+    const matchesCategory = selectedCategory === 'ALL' || problem.category === selectedCategory;
+    
+    return matchesSearch && matchesDifficulty && matchesCategory;
+  });
+
+  // Get unique categories
+  const categories = ['ALL', ...new Set(problems.map(p => p.category).filter(Boolean))];
 
   if (loading) {
     return (
@@ -175,6 +247,17 @@ const InterviewRoom = () => {
 
             {/* Timer */}
             <Timer sessionId={sessionId} isInterviewer={user?.role === 'INTERVIEWER'} />
+
+            {/* Problem Library Button - Only for Interviewer */}
+            {user?.role === 'INTERVIEWER' && (
+              <button
+                onClick={() => setShowProblemLibrary(true)}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                Problem Library
+              </button>
+            )}
 
             {/* End Session Button - Only for Interviewer */}
             {user?.role === 'INTERVIEWER' && (
@@ -225,7 +308,8 @@ const InterviewRoom = () => {
             {activeTab === 'code' && (
               <CodeEditor 
                 sessionId={sessionId} 
-                problem={sessionData?.problem}
+                problem={currentProblem}
+                isInterviewer={user?.role === 'INTERVIEWER'}
               />
             )}
             {activeTab === 'whiteboard' && (
@@ -250,6 +334,127 @@ const InterviewRoom = () => {
           </div>
         </div>
       </div>
+
+      {/* Problem Library Modal */}
+      {showProblemLibrary && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg w-full max-w-6xl max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+              <h3 className="text-xl font-semibold text-white">Problem Library</h3>
+              <button
+                onClick={() => setShowProblemLibrary(false)}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="px-6 py-4 border-b border-gray-700 space-y-3">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search problems by title or description..."
+                  className="w-full bg-gray-700 text-white pl-10 pr-4 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-400 mb-1">Difficulty</label>
+                  <select
+                    value={selectedDifficulty}
+                    onChange={(e) => setSelectedDifficulty(e.target.value)}
+                    className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-purple-500 text-sm"
+                  >
+                    <option value="ALL">All Difficulties</option>
+                    <option value="EASY">Easy</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HARD">Hard</option>
+                  </select>
+                </div>
+
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-400 mb-1">Category</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600 focus:outline-none focus:border-purple-500 text-sm"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>
+                        {cat === 'ALL' ? 'All Categories' : cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <div className="text-sm text-gray-400 px-3 py-2 bg-gray-700 rounded-lg border border-gray-600">
+                    {filteredProblems.length} problems
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Problems List */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProblems.map((problem) => (
+                  <div
+                    key={problem.id}
+                    className={`bg-gray-700 rounded-lg p-4 border-2 transition-all cursor-pointer hover:border-purple-500 ${
+                      currentProblem?.id === problem.id ? 'border-purple-500 bg-gray-600' : 'border-transparent'
+                    }`}
+                    onClick={() => handleSelectProblem(problem)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="text-base font-semibold text-white flex-1 pr-2">{problem.title}</h4>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${
+                        problem.difficulty === 'EASY' ? 'bg-green-900 text-green-300' :
+                        problem.difficulty === 'MEDIUM' ? 'bg-yellow-900 text-yellow-300' :
+                        'bg-red-900 text-red-300'
+                      }`}>
+                        {problem.difficulty}
+                      </span>
+                    </div>
+                    
+                    {problem.category && (
+                      <div className="mb-2">
+                        <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">
+                          {problem.category}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-300 line-clamp-2 mb-2">{problem.description}</p>
+                    
+                    {currentProblem?.id === problem.id && (
+                      <div className="mt-2 flex items-center gap-2 text-purple-400 text-xs">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                        Currently Active
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {filteredProblems.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-400">No problems match your search</p>
+                  <p className="text-sm text-gray-500 mt-2">Try adjusting your filters</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

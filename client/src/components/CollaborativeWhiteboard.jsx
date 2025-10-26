@@ -12,13 +12,14 @@ const CollaborativeWhiteboard = ({ sessionId }) => {
     editorRef.current = editor;
 
     // Listen for changes and broadcast
-    editor.store.listen((entry) => {
+    const unsubscribe = editor.store.listen((entry) => {
       if (isRemoteUpdate.current) {
         isRemoteUpdate.current = false;
         return;
       }
 
-      if (socket) {
+      if (socket && sessionId) {
+        console.log('🎨 Emitting whiteboard change');
         const snapshot = editor.store.getSnapshot();
         socket.emit('whiteboard-change', {
           sessionId,
@@ -26,13 +27,16 @@ const CollaborativeWhiteboard = ({ sessionId }) => {
         });
       }
     }, { scope: 'document' });
+
+    return unsubscribe;
   };
 
   // Listen for remote whiteboard updates
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !sessionId) return;
 
-    socket.on('whiteboard-update', ({ drawingData }) => {
+    const handleWhiteboardUpdate = ({ drawingData }) => {
+      console.log('🎨 Received whiteboard update');
       if (editorRef.current && drawingData) {
         isRemoteUpdate.current = true;
         try {
@@ -41,10 +45,12 @@ const CollaborativeWhiteboard = ({ sessionId }) => {
           console.error('Failed to apply whiteboard update:', err);
         }
       }
-    });
+    };
+
+    socket.on('whiteboard-update', handleWhiteboardUpdate);
 
     return () => {
-      socket.off('whiteboard-update');
+      socket.off('whiteboard-update', handleWhiteboardUpdate);
     };
   }, [socket, sessionId]);
 

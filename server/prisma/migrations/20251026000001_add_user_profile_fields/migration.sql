@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "User" 
+ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN "organization" TEXT,
+ADD COLUMN "jobRole" TEXT,
+ADD COLUMN "phoneNumber" TEXT,
+ADD COLUMN "bio" TEXT,
+ADD COLUMN "linkedinUrl" TEXT,
+ADD COLUMN "githubUrl" TEXT,
+ADD COLUMN "location" TEXT;

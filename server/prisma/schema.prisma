@@ -24,18 +24,32 @@ model User {
   name                String?
   role                UserRole
   createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+  
+  // Profile fields
+  organization        String?
+  jobRole             String?
+  phoneNumber         String?
+  bio                 String?
+  linkedinUrl         String?
+  githubUrl           String?
+  location            String?
+  
   interviewerSessions InterviewSession[] @relation("InterviewerSessions")
   candidateSessions   InterviewSession[] @relation("CandidateSessions")
 }
 
 model Problem {
-  id          String             @id @default(cuid())
-  title       String
-  description String
-  difficulty  String
-  starterCode String?
-  createdAt   DateTime           @default(now())
-  sessions    InterviewSession[]
+  id              String             @id @default(cuid())
+  title           String
+  description     String
+  difficulty      String
+  category        String?            // Array, String, Tree, Graph, etc.
+  starterCode     Json?              // Language-specific starter code { javascript: "...", python: "...", etc. }
+  testCases       Json?              // Array of test cases with input/output
+  functionName    String?            // Main function name for testing
+  createdAt       DateTime           @default(now())
+  sessions        InterviewSession[]
 }
 
 model InterviewSession {

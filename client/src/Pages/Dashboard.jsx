@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Plus, Copy, ExternalLink, Clock, User, LogOut } from 'lucide-react';
+import { Plus, Copy, ExternalLink, Clock, User, LogOut, UserCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -123,6 +123,13 @@ const Dashboard = () => {
               </div>
             </div>
             <button
+              onClick={() => navigate('/profile')}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              title="My Profile"
+            >
+              <UserCircle className="w-5 h-5 text-gray-400" />
+            </button>
+            <button
               onClick={handleSignOut}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
               title="Sign Out"
@@ -137,7 +144,7 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-xl font-semibold text-white">Your Interview Sessions</h2>
+          <h2 className="text-xl font-semibold text-white">Your Past Interview Sessions</h2>
           {user?.role === 'INTERVIEWER' ? (
             <button
               onClick={() => setShowCreateModal(true)}

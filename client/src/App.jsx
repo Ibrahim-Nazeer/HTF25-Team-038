@@ -3,9 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Login from './Pages/Login.jsx';
-import Dashboard from './pages/Dashboard';
-import InterviewRoom from './pages/InterviewRoom';
+import Dashboard from './Pages/Dashboard';
+import InterviewRoom from './Pages/InterviewRoom';
 import HeroPage from './Pages/heropage.jsx';
+import Profile from './Pages/Profile.jsx';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +35,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

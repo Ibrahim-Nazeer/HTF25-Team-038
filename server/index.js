@@ -10,14 +10,27 @@ const server = http.createServer(app);
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: [
+      process.env.CLIENT_URL || 'http://localhost:5173',
+      'http://localhost:5174', // Alternate port
+      'http://localhost:5175', // Another alternate
+      'https://htf-25-team-038.vercel.app' // Production frontend
+    ],
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'https://htf-25-team-038.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Import routes
@@ -59,6 +72,7 @@ io.on('connection', (socket) => {
 
   // Code editor synchronization
   socket.on('code-change', ({ sessionId, code, language }) => {
+    console.log(`📝 Code change in session ${sessionId}, language: ${language}, code length: ${code?.length}`);
     socket.to(sessionId).emit('code-update', { code, language });
   });
 
@@ -69,6 +83,7 @@ io.on('connection', (socket) => {
 
   // Whiteboard synchronization
   socket.on('whiteboard-change', ({ sessionId, drawingData }) => {
+    console.log(`🎨 Whiteboard change in session ${sessionId}`);
     socket.to(sessionId).emit('whiteboard-update', { drawingData });
   });
 
@@ -100,6 +115,12 @@ io.on('connection', (socket) => {
   socket.on('end-session', ({ sessionId }) => {
     io.to(sessionId).emit('session-ended');
     console.log(`Session ${sessionId} ended`);
+  });
+
+  // Change problem
+  socket.on('change-problem', ({ sessionId, problem }) => {
+    socket.to(sessionId).emit('problem-changed', { problem });
+    console.log(`Problem changed in session ${sessionId} to ${problem.title}`);
   });
 
   // Leave session
