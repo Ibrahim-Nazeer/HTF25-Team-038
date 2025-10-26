@@ -174,8 +174,8 @@ npm run preview      # Preview production build
 - Ensure GitHub OAuth is configured in Firebase Console
 - Add authorized domains in Firebase
 
-**Daily.co video not working:**
-- Verify Daily.co API key
+**whereby video not working:**
+- Verify whereby API key
 - Check browser permissions for camera/mic
 - Ensure room URL is generated correctly
 
