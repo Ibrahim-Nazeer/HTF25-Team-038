@@ -86,7 +86,8 @@ testDatabaseConnection();
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/problems', problemsRouter);
 app.use('/api/auth', authRouter);
-
+app.get('/health', (req, res) => { 
+  res.send('Server is running')});
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
