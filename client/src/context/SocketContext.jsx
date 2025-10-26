@@ -10,7 +10,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Use environment variable or fallback to Railway URL
     const backendURL =
-      import.meta.env.VITE_API_URL || 'https://htf25-team-038-production.up.railway.app';
+      import.meta.env.VITE_API_URL || ' ';
 
     if (!import.meta.env.VITE_API_URL) {
       console.warn('⚠️ VITE_API_URL not set, using fallback:', backendURL);
