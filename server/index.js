@@ -14,7 +14,9 @@ const io = new Server(server, {
       process.env.CLIENT_URL || 'http://localhost:5173',
       'http://localhost:5174', // Alternate port
       'http://localhost:5175', // Another alternate
-      'https://htf-25-team-038.vercel.app' // Production frontend
+      'https://htf-25-team-038.vercel.app', // Production frontend
+      'https://htf-25-team-038-k5ih-fzfny24gj.vercel.app', // Preview deployment
+      'https://htf-25-team-038-k-git-0b35f0-syedibrahimnazeer30-1477s-projects.vercel.app' // Git preview
     ],
     methods: ['GET', 'POST'],
     credentials: true
@@ -27,7 +29,9 @@ app.use(cors({
     process.env.CLIENT_URL || 'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
-    'https://htf-25-team-038.vercel.app'
+    'https://htf-25-team-038.vercel.app',
+    'https://htf-25-team-038-k5ih-fzfny24gj.vercel.app',
+    'https://htf-25-team-038-k-git-0b35f0-syedibrahimnazeer30-1477s-projects.vercel.app'
   ],
   credentials: true
 }));
